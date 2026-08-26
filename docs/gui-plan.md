@@ -128,8 +128,12 @@ von `schema.sql` ist unkritisch, solange die Einbindung über eine `.spec`-Datei
 läuft statt über `--add-data` mit plattformabhängigem Trenner. Der eigentliche
 Klumpen ist die Architektur: `macos-latest` baut inzwischen ausschließlich für
 Apple Silicon, und `actions/setup-python` liefert dort kein universal2-Python —
-ein dort gebautes Binary läuft auf Intel-Macs nicht. Ob ein zweiter
-`macos-13`-Runner in die Matrix muss, ist vor dem Schreiben der CI zu klären.
+ein dort gebautes Binary läuft auf Intel-Macs nicht.
+
+**Entschieden:** Version 1 baut nur für Apple Silicon. Die Matrix wird
+trotzdem so geschrieben, dass ein `macos-13`-Runner später ein zusätzlicher
+Eintrag ist und kein Umbau. Dass Intel-Macs außen vor bleiben, gehört ins
+README, nicht in eine Fußnote.
 
 ### Slice 2 — RPC-Vertrag
 
@@ -162,6 +166,24 @@ Token-Datei als einzige Quelle für Farben, Abstände, Schriften und Materialit�
 in hell und dunkel; Anbindung an Vue-CSS und an `render/html.py`. Parallel: der
 virtualisierte Verlauf mit variablen Elementhöhen — Pausen als Abstand,
 Jahreszäsuren, Zeitstrahl am Rand — an einem echten Chat mit 39.000 Nachrichten.
+
+**Bibliothek: virtua** (`virtua/vue`, `VList`), wegen der `shift`-Eigenschaft
+für das Nachladen älterer Nachrichten nach oben. Ausdrücklich abgelehnt:
+`vue-virtual-scroller`, dessen `DynamicScroller` bei jeder Höhenänderung alle
+gemessenen Höhen verwirft — und genau das passiert hier ständig, weil 548 von
+1.050 Anhängen verzögert nachladen. Begründung in
+`docs/research/virtualisierung.md`.
+
+**Der Zeitstrahl staucht lange Pausen.** Die Achse folgt echter Zeit, aber
+Lücken über einem Schwellwert werden zusammengefaltet und als solche markiert.
+Ein Jahr Funkstille bleibt sichtbar, ohne den halben Zeitstrahl zu belegen.
+Keine der Bibliotheken liefert dafür eine Vorlage — das wird eigener Code über
+`sent_at`, und er gehört in den Prototyp, nicht in eine spätere Politur.
+
+**Der Prototyp läuft gegen das echte große Backup, nicht gegen die
+Testfixture.** Für virtua existieren keine unabhängigen Messungen bei dieser
+Größenordnung; die synthetischen Testdaten würden das Problem verstecken,
+statt es zu zeigen.
 
 **Verifikation:** Flüssiges Scrollen und Springen im großen Chat, keine
 springenden Positionen beim Nachladen, beide Themes durchgehend korrekt.
