@@ -9,7 +9,7 @@ verschieben — nur Ziel, Umfang, Verifikation und Risiko je Slice.
 
 Die GUI ist eine **zusätzliche Schicht**, kein Ersatz. `cli.py` bleibt
 unangetastet, weil `chappe sql` und Scripting in keiner Klick-Oberfläche eine
-gute Heimat finden — und weil die 49 Tests daran hängen.
+gute Heimat finden — und weil die 56 Tests daran hängen.
 
 | Achse | Entscheidung |
 |---|---|
@@ -49,6 +49,15 @@ Import.
   `profileKey` und die `identityKey` aller Kontakte.
 - **`--keep-secrets` erreicht die GUI nicht** — auch nicht versteckt, auch
   nicht hinter einer Warnung.
+
+### Recherchestand
+
+Die technischen Annahmen dieses Plans sind belegt, nicht geraten. Sechs
+Recherchen liegen unter `docs/research/`: Sidecar-Betrieb, virtualisiertes
+Scrollen, Electron-Härtung, Build-Pipeline, Signal-Export aus Nutzersicht,
+Design-Tokens. `docs/research/00-synthese.md` führt sie zusammen, löst die
+Widersprüche zwischen ihnen auf und benennt, was offen blieb. Wer eine
+Entscheidung aus diesem Plan anzweifelt, findet dort die Quelle dazu.
 
 ## Struktur
 
@@ -90,6 +99,17 @@ ungestylte Liste im Renderer. Bewusst hässlich.
 einer vorhandenen Datenbank, und der Python-Prozess ist nach dem Schließen
 nachweislich beendet — auch nach einem Absturz des Renderers.
 
+Zwei Prüfungen gehören schon hierher, nicht erst in Slice 1
+(Belege in `docs/research/sidecar.md`):
+
+- `child.pid` explizit auf `number` prüfen, bevor sich Code auf `child.kill()`
+  verlässt. Auf macOS kann `spawn()` für ein PyInstaller-Binary `null` liefern,
+  obwohl der Prozess läuft.
+- Das Beenden einmal gegen eine echte Windows-VM testen. Windows kennt kein
+  kooperatives `SIGTERM`; sauberes Beenden braucht den `shutdown`-Rahmen aus
+  Slice 2. Wer Windows erst in Slice 1 zum ersten Mal anfasst, merkt das zu
+  spät.
+
 **Risiko:** hoch. Hier entscheidet sich, ob die Architektur trägt.
 
 ### Slice 1 — Drei-Plattform-Beweis
@@ -103,8 +123,13 @@ wird so gebaut, dass Signierung später nur Secrets und zwei Schritte sind.
 **Verifikation:** Auf jeder der drei Plattformen startet das Artefakt und zeigt
 Chats. Windows und Linux über VMs.
 
-**Risiko:** hoch. PyInstaller verhält sich je Plattform unterschiedlich,
-besonders beim Auffinden von `schema.sql`.
+**Risiko:** hoch, aber an anderer Stelle als zunächst angenommen. Das Auffinden
+von `schema.sql` ist unkritisch, solange die Einbindung über eine `.spec`-Datei
+läuft statt über `--add-data` mit plattformabhängigem Trenner. Der eigentliche
+Klumpen ist die Architektur: `macos-latest` baut inzwischen ausschließlich für
+Apple Silicon, und `actions/setup-python` liefert dort kein universal2-Python —
+ein dort gebautes Binary läuft auf Intel-Macs nicht. Ob ein zweiter
+`macos-13`-Runner in die Matrix muss, ist vor dem Schreiben der CI zu klären.
 
 ### Slice 2 — RPC-Vertrag
 
@@ -116,8 +141,14 @@ Seitenweise-Abruf, Suche, Statistik, Medien, Import mit Fortschritts-Ereignissen
 Export, SQL. Dazu ein einheitliches Fehlerformat und ein Ereignisstrom für
 lange Vorgänge.
 
+Zusätzlich zu den fachlichen Methoden gehört eine Steuernachricht ins
+Protokoll: ein `shutdown`-Rahmen, den `chappe rpc` mit geschlossener
+Datenbankverbindung beantwortet, bevor Electron hart nachfasst. Ohne ihn gibt
+es auf Windows kein sauberes Beenden — das Betriebssystem kennt dort nur den
+sofortigen Abbruch.
+
 **Verifikation:** pytest-Tests für jede Methode gegen das synthetische
-Mini-Backup aus `tests/fixtures/`. Die bestehenden 49 Tests laufen unverändert
+Mini-Backup aus `tests/fixtures/`. Die bestehenden 56 Tests laufen unverändert
 weiter.
 
 **Risiko:** mittel. Der Ort, an dem sich später Fehler am teuersten rächen.
