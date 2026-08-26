@@ -1,0 +1,10 @@
+{
+  "typeCheckingMode": "basic",
+  "include": ["src", "tests"],
+  "pythonVersion": "3.11",
+  "reportMissingTypeArgument": false,
+  "reportAny": false,
+  "reportUnknownMemberType": false,
+  "reportUnknownVariableType": false,
+  "reportUnknownParameterType": false
+}

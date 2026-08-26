@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chappe"
+version = "0.1.0"
+description = "Liest Signal-Backups (main.jsonl + files/) in eine SQLite-Datenbank ein und macht sie durchsuchbar und auswertbar."
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+chappe = "chappe.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chappe"]
+# schema.sql wird zur Laufzeit über Path(__file__).with_name("schema.sql")
+# gelesen (importer.py) — muss daher im installierten Paket mitgeliefert werden.
+artifacts = ["src/chappe/schema.sql"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/chappe/schema.sql" = "chappe/schema.sql"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,47 @@
+# Python-Bytecode und Caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtuelle Umgebungen
+.venv/
+venv/
+env/
+
+# Packaging / Build-Artefakte
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing / Type-Checking
+.pytest_cache/
+.pyright/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Editor- und OS-Artefakte
+.vscode/
+.idea/
+.DS_Store
+.claude/settings.local.json
+
+# Werkzeug-Caches
+.code-review-graph/
+
+# SQLite-Datenbanken (können Backup-Inhalte enthalten)
+*.db
+*.db-wal
+*.db-shm
+
+# Export-Ausgaben (Markdown/HTML-Rendering, Medien-Export)
+export/
+media/
+
+# ACHTUNG, privates Backup-Material: main.jsonl & Co. sowie echte Export-
+# Verzeichnisse dürfen NIE committet werden — dieses Tool liest private
+# Chatinhalte. Testfixtures erzeugen ihre eigenen Daten zur Laufzeit.
+*.jsonl
+signal-export-*/
+tests/fixtures/*.db
