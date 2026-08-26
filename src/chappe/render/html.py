@@ -20,7 +20,7 @@ from urllib.parse import quote
 
 from .. import query
 from ..media import export_media
-from ..model import media_class, ms_to_local, safe_filename
+from ..model import media_class, ms_to_local, unique_filename
 
 # --------------------------------------------------------------------- Text
 
@@ -708,18 +708,12 @@ def _render_chat_page(chat_name: str, backup_label: str, rows: list[sqlite3.Row]
     return "".join(doc)
 
 
-def _unique_filename(chat_name: str, backup_label: str, chat_id: int, grouped: bool, registry: dict) -> str:
-    if grouped:
-        base = f"{safe_filename(backup_label, 40)}__{safe_filename(chat_name, 60)}"
-    else:
-        base = safe_filename(chat_name, 60) or "chat"
-    candidate = base + ".html"
-    if candidate not in registry:
-        registry[candidate] = True
-        return candidate
-    candidate = f"{base}_{chat_id}.html"
-    registry[candidate] = True
-    return candidate
+def _unique_filename(
+    chat_name: str, backup_label: str, chat_id: int, grouped: bool, registry: dict[str, bool]
+) -> str:
+    return unique_filename(
+        chat_name, backup_label, chat_id, ".html", grouped=grouped, registry=registry
+    )
 
 
 # -------------------------------------------------------------------- Index
@@ -832,14 +826,13 @@ def write_html(
         chat_backup = chat_row["backup"]
         progress(f"Chat: {chat_name} ({chat_backup}) …")
 
-        # chat=<name> filtert bei query.transcript über `c.name LIKE '%name%'` — das
-        # matcht bei generischen Namen (z. B. "Alex" als Substring von "Alexander
-        # Schneider") mehr als den einen gemeinten Chat. Wir grenzen deshalb hier
-        # zusätzlich exakt auf die chat_id dieser Zeile aus list_chats ein.
+        # Über chat_id filtern, nicht über chat=<name>: Ein Namensfilter geht als
+        # `c.name LIKE '%name%'` in die Abfrage und zöge bei generischen Namen
+        # (z. B. "Alex" als Substring von "Alexander Schneider") oder bei zwei
+        # Backups mit denselben Kontakten fremde Nachrichten mit herein.
         rows = query.transcript(
-            conn, backup=chat_backup, chat=chat_name, since=since, until=until, ascending=True
+            conn, chat_id=chat_row["chat_id"], since=since, until=until, ascending=True
         )
-        rows = [r for r in rows if r["chat_id"] == chat_row["chat_id"]]
         if not rows:
             continue
 

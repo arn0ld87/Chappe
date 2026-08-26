@@ -6,7 +6,7 @@ import sqlite3
 from pathlib import Path
 
 from .. import query
-from ..model import media_class, ms_to_local, safe_filename
+from ..model import media_class, ms_to_local, unique_filename
 
 KIND_MARK = {
     "call": "☎",
@@ -114,13 +114,26 @@ def write_markdown(
     # jede Iteration ihn mit dem jeweiligen Chatnamen überschreiben und es entstünden
     # Dateien für alle Chats statt nur für den gewünschten.
     chat_filter = (filters.get("chat") or "").lower()
-    for chat in query.list_chats(conn, backup=filters.get("backup")):
+    backup_filter = filters.get("backup")
+    total_backups = conn.execute("SELECT COUNT(*) AS n FROM backups").fetchone()["n"]
+    grouped = backup_filter is None and total_backups > 1
+    registry: dict[str, bool] = {}
+
+    for chat in query.list_chats(conn, backup=backup_filter):
         if chat_filter and chat_filter not in (chat["chat"] or "").lower():
             continue
+        # Über chat_id filtern statt über den Namen: Ein Namensfilter geht als
+        # LIKE '%name%' in die Abfrage und zöge bei zwei Backups mit denselben
+        # Kontakten — oder bei einem Namen, der Teilstring eines anderen ist —
+        # fremde Nachrichten in dieses Transkript.
         sub = dict(filters)
-        sub["chat"] = chat["chat"]
+        sub.pop("chat", None)
+        sub["chat_id"] = chat["chat_id"]
         text = render_transcript(conn, plain=plain, **sub)
-        path = out / (safe_filename(chat["chat"], 60) + ext)
+        path = out / unique_filename(
+            chat["chat"], chat["backup"], chat["chat_id"], ext,
+            grouped=grouped, registry=registry,
+        )
         path.write_text(text, encoding="utf-8")
         written.append(path)
     return written

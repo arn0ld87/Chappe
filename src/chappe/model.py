@@ -284,6 +284,35 @@ def safe_filename(name: str, limit: int = 80) -> str:
     return cleaned[:limit]
 
 
+def unique_filename(
+    chat_name: str,
+    backup_label: str,
+    chat_id: int,
+    ext: str,
+    *,
+    grouped: bool,
+    registry: dict[str, bool],
+) -> str:
+    """Kollisionsfreier Dateiname je Chat.
+
+    Zwei Backups enthalten dieselben Kontakte, also treten Chats mit identischem
+    Namen doppelt auf. Ohne Unterscheidung überschriebe die zweite Datei die
+    erste. `grouped` stellt das Backup-Label voran, sobald über mehrere Backups
+    exportiert wird; bei einer Restkollision entscheidet die chat_id.
+    """
+    if grouped:
+        base = f"{safe_filename(backup_label, 40)}__{safe_filename(chat_name, 60)}"
+    else:
+        base = safe_filename(chat_name, 60) or "chat"
+    candidate = base + ext
+    if candidate not in registry:
+        registry[candidate] = True
+        return candidate
+    candidate = f"{base}_{chat_id}{ext}"
+    registry[candidate] = True
+    return candidate
+
+
 def media_class(content_type: str | None, flag: str | None = None) -> str:
     """Grobe Klasse für Darstellung und Filter."""
     ct = (content_type or "").lower()

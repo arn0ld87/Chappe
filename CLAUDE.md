@@ -29,7 +29,7 @@ python3 -m chappe sql "SELECT chat, COUNT(*) FROM v_messages GROUP BY chat"
 
 Tests:
 ```bash
-PYTHONPATH=src python3 -m pytest tests -q     # 49 Tests, laufen in unter 1 s
+PYTHONPATH=src python3 -m pytest tests -q     # 56 Tests, laufen in unter 1 s
 PYTHONPATH=src python3 -m pytest tests/test_importer.py::test_report_counts -q
 ```
 
@@ -84,6 +84,8 @@ Nicht jeder referenzierte Anhang liegt lokal vor: Anhänge ohne `wasDownloaded` 
 `query.resolve_chat_ids()` löst eine Chatbezeichnung zu Zeilen-IDs auf, **exakter Name gewinnt vor Teiltreffer**. `_filters()` filtert dann über `m.chat_id IN (…)`.
 
 Der Grund ist konkret: Ein Chat „Alex" ist Teilstring von „Alexander Schneider" und „Alexander Zietlow". Die frühere `c.name LIKE '%…%'`-Logik lieferte für `--chat Alex` **21.198 statt 11.397 Nachrichten** — drei Chats stillschweigend zu einem vermischt, ohne Fehlermeldung. Wer neue Abfragen schreibt: `chat_id` nehmen, wenn er bekannt ist, sonst `chat` an `_filters` geben und nie selbst ein `LIKE` auf `c.name` bauen. `query.build_filter(conn, **filters)` ist der öffentliche Zugang für eigenes SQL.
+
+Das gilt auch für die Renderer, und dort doppelt: Beide iterieren `query.list_chats()` und geben je Zeile deren `chat_id` an `query.transcript()` — ein Namensfilter zöge bei zwei Backups mit denselben Kontakten die fremde Perspektive mit ins Transkript. Weil derselbe Chatname dann zweimal auftritt, vergibt `model.unique_filename()` die Ausgabedateinamen: Backup-Label als Präfix, sobald über mehrere Backups exportiert wird, `chat_id` als Rückfall bei Restkollision. Ohne das überschrieb die zweite Datei die erste stillschweigend. `tests/test_render.py` hält beides fest.
 
 ### Weitere Invarianten des Schemas
 

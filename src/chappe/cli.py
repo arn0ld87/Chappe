@@ -15,7 +15,7 @@ from pathlib import Path
 from . import query
 from .importer import connect, import_backup
 from .media import export_media
-from .model import ms_to_local, safe_filename
+from .model import ms_to_local, unique_filename
 from .render.markdown import render_transcript, write_markdown
 
 WEEKDAYS = ["Sonntag", "Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag"]
@@ -743,14 +743,26 @@ def cmd_media(args, conn) -> int:
 # ------------------------------------------------------------------ export
 
 
+def _export_grouping(conn, filters: dict) -> bool:
+    """Muss das Backup-Label in die Dateinamen, weil über mehrere exportiert wird?"""
+    if filters.get("backup") is not None:
+        return False
+    return conn.execute("SELECT COUNT(*) AS n FROM backups").fetchone()["n"] > 1
+
+
 def _export_json(conn, out_dir: Path, filters: dict) -> list[Path]:
     written = []
     chat_filter = (filters.get("chat") or "").lower()
+    grouped = _export_grouping(conn, filters)
+    registry: dict[str, bool] = {}
     for chat in query.list_chats(conn, backup=filters.get("backup")):
         if chat_filter and chat_filter not in (chat["chat"] or "").lower():
             continue
+        # chat_id statt Chatname: siehe Invariante 2 in CLAUDE.md — ein Namensfilter
+        # zieht gleichnamige Chats aus dem zweiten Backup mit herein.
         sub = dict(filters)
-        sub["chat"] = chat["chat"]
+        sub.pop("chat", None)
+        sub["chat_id"] = chat["chat_id"]
         rows = query.transcript(conn, **sub)
         ids = [r["id"] for r in rows]
         atts = query.attachments_for(conn, ids)
@@ -778,7 +790,10 @@ def _export_json(conn, out_dir: Path, filters: dict) -> list[Path]:
                     if r["has_quote"] else None
                 ),
             })
-        path = out_dir / (safe_filename(chat["chat"], 60) + ".json")
+        path = out_dir / unique_filename(
+            chat["chat"], chat["backup"], chat["chat_id"], ".json",
+            grouped=grouped, registry=registry,
+        )
         path.write_text(json.dumps(messages, ensure_ascii=False, indent=2), encoding="utf-8")
         written.append(path)
     return written
@@ -787,13 +802,19 @@ def _export_json(conn, out_dir: Path, filters: dict) -> list[Path]:
 def _export_csv(conn, out_dir: Path, filters: dict) -> list[Path]:
     written = []
     chat_filter = (filters.get("chat") or "").lower()
+    grouped = _export_grouping(conn, filters)
+    registry: dict[str, bool] = {}
     for chat in query.list_chats(conn, backup=filters.get("backup")):
         if chat_filter and chat_filter not in (chat["chat"] or "").lower():
             continue
         sub = dict(filters)
-        sub["chat"] = chat["chat"]
+        sub.pop("chat", None)
+        sub["chat_id"] = chat["chat_id"]
         rows = query.transcript(conn, **sub)
-        path = out_dir / (safe_filename(chat["chat"], 60) + ".csv")
+        path = out_dir / unique_filename(
+            chat["chat"], chat["backup"], chat["chat_id"], ".csv",
+            grouped=grouped, registry=registry,
+        )
         with path.open("w", newline="", encoding="utf-8") as fh:
             writer = csv.writer(fh)
             writer.writerow(["id", "sent_at", "author", "direction", "kind", "body",
