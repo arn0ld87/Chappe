@@ -77,6 +77,13 @@ Ablage von Datenbank und Medien im plattformüblichen App-Verzeichnis:
 `~/Library/Application Support/Chappe`, `%APPDATA%\Chappe`,
 `~/.local/share/chappe`.
 
+Unter Linux weicht das von Electrons eigenem Default ab: `userData` liegt dort
+in `~/.config/Chappe`. Das bleibt so für Electrons Interna — Caches, Cookies,
+Fensterzustand gehören nach XDG tatsächlich dorthin. Datenbank und Medien sind
+aber Daten, keine Konfiguration, und liegen deshalb ausdrücklich unter
+`~/.local/share/chappe`. Beides auseinanderzuhalten kostet einen Pfad mehr im
+Code und erspart ein Verzeichnis, das der Standard nicht vorsieht.
+
 ---
 
 ## Slices
