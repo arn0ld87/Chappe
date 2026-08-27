@@ -12,7 +12,7 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from . import query
+from . import query, rpc
 from .importer import connect, import_backup
 from .media import export_media
 from .model import ms_to_local, unique_filename
@@ -960,6 +960,22 @@ def cmd_info(args, conn) -> int:
     return 0
 
 
+# ------------------------------------------------------------------ rpc
+
+
+def cmd_rpc(_args, conn) -> int:
+    """Startet die RPC-Protokollschleife für den Electron-Sidecar (Vertrag und
+    Slice-Zuschnitt in docs/gui-plan.md). Öffnet keine eigene Verbindung —
+    `main()` hat sie beim Start bereits geöffnet, nach vorheriger
+    Existenzprüfung der Datenbankdatei speziell für diesen Befehl.
+
+    `_args` bleibt ungenutzt, ist aber Pflicht: `_HANDLERS` ruft jeden
+    Befehl einheitlich als `(args, conn)` auf (siehe main()); die Methode
+    braucht hier schlicht keine der geparsten Optionen.
+    """
+    return rpc.run(conn)
+
+
 # ------------------------------------------------------------------ Parser
 
 
@@ -1120,6 +1136,12 @@ def build_parser() -> argparse.ArgumentParser:
     # info
     sub.add_parser("info", help="Welche Backups sind importiert")
 
+    # rpc
+    sub.add_parser(
+        "rpc",
+        help="Protokollschleife für den Electron-Sidecar (NDJSON über stdin/stdout, siehe docs/gui-plan.md)",
+    )
+
     return parser
 
 
@@ -1134,6 +1156,7 @@ _HANDLERS = {
     "export": cmd_export,
     "sql": cmd_sql,
     "info": cmd_info,
+    "rpc": cmd_rpc,
 }
 
 
@@ -1167,6 +1190,12 @@ def main(argv: list[str] | None = None) -> int:
     conn = None
     try:
         db_path = args.db or _default_db_path()
+        if args.command == "rpc" and not Path(db_path).is_file():
+            # connect() würde die Datei sonst stillschweigend anlegen (wie bei
+            # jedem anderen Befehl gewollt) — für rpc verlangt der
+            # Protokollvertrag stattdessen einen klaren Fehlschlag vor dem
+            # ersten Byte auf stdout, kein halb offenes Protokoll.
+            raise CliError(f"Datenbank nicht gefunden: {db_path}")
         conn = connect(db_path)
         return _HANDLERS[args.command](args, conn)
     except KeyboardInterrupt:

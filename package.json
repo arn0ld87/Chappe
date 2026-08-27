@@ -1,0 +1,30 @@
+{
+  "name": "chappe",
+  "productName": "Chappe",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Electron-Oberfläche für Chappe — liest Signal-Backups in eine durchsuchbare SQLite-Datenbank ein (siehe docs/gui-plan.md).",
+  "author": "Alexander Schneider",
+  "license": "MIT",
+  "main": "./dist/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev --config app/electron.vite.config.ts",
+    "build": "electron-vite build --config app/electron.vite.config.ts",
+    "preview": "electron-vite preview --config app/electron.vite.config.ts",
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "typecheck:node": "tsc --noEmit -p app/tsconfig.node.json",
+    "typecheck:web": "vue-tsc --noEmit -p app/tsconfig.web.json"
+  },
+  "dependencies": {
+    "vue": "^3.5.41"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "electron": "^44.0.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.6",
+    "vue-tsc": "^3.3.11"
+  }
+}

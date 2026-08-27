@@ -45,3 +45,19 @@ media/
 *.jsonl
 signal-export-*/
 tests/fixtures/*.db
+
+# Electron/Vite-App (app/) — Node-Abhängigkeiten und Build-Ausgabe.
+# dist/ ist oben bereits für Python-Build-Artefakte erfasst, gilt hier
+# ebenso für app/electron.vite.config.ts (outDir: dist/main, dist/preload,
+# dist/renderer).
+node_modules/
+out/
+release/
+*.tsbuildinfo
+
+# Lokale Dev-Datenbank für den Electron-Dev-Modus (chappe rpc), aus dem
+# synthetischen Fixture erzeugt — kein echtes Backup, aber kein Repo-Inhalt.
+.devdata/
+
+# Lokale Werkzeugeinstellungen, pro Rechner verschieden.
+.claude/settings.local.json
